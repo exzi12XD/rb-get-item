@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item Generator - Item Spawner/Generator</title>
+    <!-- Подключение Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Подключение Google Font "Creepster" -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Применение кастомного шрифта */
+        .font-creepster {
+            font-family: 'Creepster', cursive;
+        }
+
+        /* Темный фон для всей страницы */
+        body {
+            background-color: #1a202c; /* tailwind: bg-gray-900 */
+        }
+
+        /* --- Стили для карточек --- */
+        
+        /* Стиль для выделенной карточки */
+        .item-selected {
+            box-shadow: 0 0 0 3px #3b82f6, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Синяя рамка (ring-blue-500) и тень */
+            transform: scale(1.03); /* Немного увеличить */
+        }
+        
+        /* Стили для счетчика (+/-) */
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 0.5rem; /* mt-2 */
+            background-color: #2d3748; /* bg-gray-800 */
+            border-radius: 0.375rem; /* rounded-md */
+        }
+        .quantity-btn {
+            background-color: #4a5568; /* bg-gray-600 */
+            color: white;
+            border: none;
+            width: 2rem; /* w-8 */
+            height: 2rem; /* h-8 */
+            font-size: 1.25rem; /* text-xl */
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-radius: 0.375rem; /* rounded-md */
+        }
+        .quantity-btn:hover {
+            background-color: #718096; /* bg-gray-500 */
+        }
+        .quantity-display {
+            font-size: 1rem; /* text-base */
+            font-weight: 600; /* font-semibold */
+            padding: 0 0.5rem; /* px-2 */
+        }
+        
+        /* --- Стили для кнопки "Complete" --- */
+        
+        /* Неактивное состояние (по умолчанию) */
+        .disabled-button {
+            background-color: #374151; /* bg-gray-700 */
+            color: #9ca3af; /* text-gray-400 */
+            cursor: not-allowed;
+            /* Позиционирование в потоке */
+            position: relative;
+            bottom: auto;
+            left: auto;
+            transform: none;
+            width: auto; /* Авто ширина */
+            margin-top: 2rem; /* mt-8 */
+        }
+
+        /* Активное состояние (прилипшая кнопка) */
+        .active-button {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: white;
+            cursor: pointer;
+            /* Прилипание к низу */
+            position: fixed;
+            bottom: 1rem; /* p-4 от низа */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%; /* Ширина на мобильных */
+            max-width: 24rem; /* max-w-sm */
+            z-index: 50;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.3);
+        }
+        .active-button:hover {
+            background-color: #2563eb; /* blue-600 */
+        }
+
+        /* --- Стили для Модального окна --- */
+        .hidden {
+            display: none;
+        }
+        #modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+        }
+        #modal-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #2d3748; /* gray-800 */
+            padding: 2rem; /* p-8 */
+            border-radius: 0.5rem; /* rounded-lg */
+            z-index: 101;
+            width: 90%;
+            max-width: 24rem; /* max-w-sm */
+            text-align: center;
+        }
+        /* CSS Загрузчик (Spinner) */
+        .loader {
+            border: 4px solid #4a5568; /* gray-600 */
+            border-top: 4px solid #3b82f6; /* blue-500 */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* CSS Галочка (Checkmark) */
+        .checkmark-icon {
+            width: 50px;
+            height: 50px;
+            position: relative;
+            margin: 0 auto 1rem; /* auto margin and 1rem bottom */
+        }
+        .checkmark-icon .checkmark-circle {
+            stroke: #4ade80; /* green-400 */
+            stroke-width: 3;
+            fill: none;
+        }
+        .checkmark-icon .checkmark-check {
+            stroke: #4ade80; /* green-400 */
+            stroke-width: 3;
+            stroke-linecap: round;
+            fill: none;
+        }
+
+    </style>
+</head>
+<body class="text-white min-h-screen flex flex-col items-center pt-8 pb-24 px-4">
+
+    <div class="w-full max-w-4xl flex flex-col items-center">
+
+        <!-- 1. Шапка с изображением -->
+        <div class="w-full max-w-xs md:max-w-sm mb-4">
+            <img src="https://i.postimg.cc/FsV1xp7k/Gamethumbnail.webp" 
+                 alt="99 Night in the Forest" 
+                 class="w-full h-auto object-contain rounded-lg"
+                 onerror="this.src='https://placehold.co/300x150/1a202c/ffffff?text=Image+Missing'; this.onerror=null;">
+        </div>
+
+        <!-- 2. Заголовки -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-white mb-2">Item Spawner/Generator</h1>
+            <h2 class="text-2xl text-gray-300 mb-2 font-creepster tracking-wider">99 Night in the Forest 🌙</h2>
+            <p id="selection-counter" class="text-lg text-blue-300">Select items to get</p>
+        </div>
+
+        <!-- Контейнер для Секции "Resources" -->
+        <div class="w-full max-w-4xl px-4">
+            <h3 class="text-2xl font-semibold text-white text-center mb-4">Resources</h3>
+            
+            <!-- 3. Сетка предметов "Resources" -->
+            <div id="item-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
+                <!-- Карточки предметов "Resources" будут добавлены сюда с помощью JS -->
+            </div>
+        </div>
+
+        <!-- Контейнер для Секции "Armor" -->
+        <div class="w-full max-w-4xl px-4 mt-8">
+            <h3 class="text-2xl font-semibold text-white text-center mb-4">Armor</h3>
+            
+            <!-- 3. Сетка предметов "Armor" -->
+            <div id="armor-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
+                <!-- Карточки предметов "Armor" будут добавлены сюда с помощью JS -->
+            </div>
+        </div>
+
+
+        <!-- Контейнер для Секции "Weapon" -->
+        <div class="w-full max-w-4xl px-4 mt-8">
+            <h3 class="text-2xl font-semibold text-white text-center mb-4">Weapon</h3>
+            
+            <!-- 3. Сетка предметов "Weapon" -->
+            <div id="weapon-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
+                <!-- Карточки предметов "Weapon" будут добавлены сюда с помощью JS -->
+            </div>
+        </div>
+
+
+        <!-- 4. Кнопка "Далее" -->
+        <button id="next-button" 
+                class="px-6 py-3 text-xl font-bold rounded-lg transition-all duration-300 ease-in-out disabled-button">
+            Complete
+        </button>
+
+    </div>
+
+    <!-- 5. Модальное окно (скрыто по умолчанию) -->
+    <div id="modal-overlay" class="hidden"></div>
+    <div id="modal-container" class="hidden">
+        
+        <!-- Состояние 1: Кнопка Spawn -->
+        <div id="modal-initial-state">
+            <!-- Аватарка -->
+            <img src="https://tr.rbxcdn.com/30DAY-AvatarHeadshot-7B24B45D34F223F4E1B275D41CF9920E-Png/150/150/AvatarHeadshot/Webp/noFilter"
+                 alt="Avatar"
+                 class="w-24 h-24 rounded-full mx-auto mb-3 border-2 border-gray-600"
+                 onerror="this.src='https://placehold.co/150x150/2d3748/ffffff?text=Avatar'; this.onerror=null;">
+            <!-- Никнейм -->
+            <p class="text-lg font-semibold text-white mb-4">Niketr4dikor</p>
+            
+            <button id="spawn-button" class="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition-colors">
+                Spawn item in the game
+            </button>
+        </div>
+
+        <!-- Состояние 2: Загрузка -->
+        <div id="modal-loading-state" class="hidden">
+            <div class="loader"></div>
+        </div>
+
+        <!-- Состояние 3: Успех -->
+        <div id="modal-success-state" class="hidden">
+            <div class="checkmark-icon">
+                <svg viewBox="0 0 52 52" class="w-full h-full">
+                    <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                    <path class="checkmark-check" d="M14 27l10 10 16-16" fill="none"/>
+                </svg>
+            </div>
+            <p class="text-lg font-semibold text-green-400">Completed item spawned</p>
+            <button id="close-modal-button" class="w-full mt-4 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const itemGrid = document.getElementById('item-grid');
+            const armorGrid = document.getElementById('armor-grid'); // Сетка для брони
+            const weaponGrid = document.getElementById('weapon-grid'); // Сетка для оружия
+            const nextButton = document.getElementById('next-button');
+            const selectionCounter = document.getElementById('selection-counter');
+
+            // --- Элементы Модального окна ---
+            const modalOverlay = document.getElementById('modal-overlay');
+            const modalContainer = document.getElementById('modal-container');
+            const spawnButton = document.getElementById('spawn-button');
+            const closeModalButton = document.getElementById('close-modal-button');
+            
+            const initialState = document.getElementById('modal-initial-state');
+            const loadingState = document.getElementById('modal-loading-state');
+            const successState = document.getElementById('modal-success-state');
+            
+            // Используем Map для хранения количества { 'itemName': count }
+            let selectedItems = new Map();
+
+            // --- Функция открытия/закрытия модального окна ---
+            function openModal() {
+                // Сброс в начальное состояние
+                initialState.classList.remove('hidden');
+                loadingState.classList.add('hidden');
+                successState.classList.add('hidden');
+                
+                // Показываем окно
+                modalOverlay.classList.remove('hidden');
+                modalContainer.classList.remove('hidden');
+            }
+
+            function closeModal() {
+                modalOverlay.classList.add('hidden');
+                modalContainer.classList.add('hidden');
+            }
+
+            // --- Обработчики Модального окна ---
+            nextButton.addEventListener('click', () => {
+                if (selectedItems.size > 0) {
+                    openModal();
+                }
+            });
+
+            spawnButton.addEventListener('click', () => {
+                // 1. Показать загрузку
+                initialState.classList.add('hidden');
+                loadingState.classList.remove('hidden');
+
+                // 2. Симулировать задержку в 3 секунды
+                setTimeout(() => {
+                    // 3. Показать сообщение об успехе
+                    loadingState.classList.add('hidden');
+                    successState.classList.remove('hidden');
+                }, 3000);
+            });
+
+            // Закрытие по кнопке "Close" или клику на фон
+            closeModalButton.addEventListener('click', closeModal);
+            modalOverlay.addEventListener('click', closeModal);
+
+
+            // Функция для создания карточки предмета
+            // Добавлен 'type' ('resource' или 'simple')
+            function createItemCard(name, imageUrl, gridElement, type = 'simple') {
+                const grid = gridElement || itemGrid; 
+                
+                const card = document.createElement('div');
+                card.className = 'item-card bg-gray-800 p-3 rounded-lg shadow-lg transition-all duration-200 ease-in-out flex flex-col items-center';
+                card.dataset.name = name;
+
+                if (type === 'resource') {
+                    // --- Структура для "Resources" с +/- ---
+                    card.innerHTML = `
+                        <div class="w-20 h-20 mb-2 flex items-center justify-center">
+                            <img src="${imageUrl}" alt="${name}" 
+                                 class="max-w-full max-h-full object-contain"
+                                 onerror="this.src='https://placehold.co/100x100/374151/ffffff?text=No+Img'; this.onerror=null;">
+                        </div>
+                        <span class="text-sm font-medium text-center text-gray-300 h-10 flex items-center justify-center">${name}</span>
+                        <div class="quantity-controls">
+                            <button class="quantity-btn minus-btn" data-name="${name}">-</button>
+                            <span class="quantity-display" data-name="${name}">0</span>
+                            <button class="quantity-btn plus-btn" data-name="${name}">+</button>
+                        </div>
+                    `;
+
+                    // Обработчики для кнопок +/-
+                    const plusBtn = card.querySelector('.plus-btn');
+                    const minusBtn = card.querySelector('.minus-btn');
+                    const quantityDisplay = card.querySelector('.quantity-display');
+
+                    plusBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Остановить всплытие
+                        let count = selectedItems.get(name) || 0;
+                        count++;
+                        selectedItems.set(name, count);
+                        quantityDisplay.textContent = count;
+                        card.classList.add('item-selected'); // Выделить, если > 0
+                        updateSelectionState();
+                    });
+
+                    minusBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        let count = selectedItems.get(name) || 0;
+                        if (count > 0) {
+                            count--;
+                            quantityDisplay.textContent = count;
+                            if (count === 0) {
+                                selectedItems.delete(name); // Удаляем из Map, если 0
+                                card.classList.remove('item-selected'); // Снять выделение
+                            } else {
+                                selectedItems.set(name, count);
+                            }
+                            updateSelectionState();
+                        }
+                    });
+
+                } else {
+                    // --- Старая структура для "Armor" и "Weapon" ---
+                    card.style.cursor = 'pointer'; // Добавляем курсор, т.к. вся карточка кликабельна
+                    card.innerHTML = `
+                        <div class="w-20 h-20 mb-2 flex items-center justify-center">
+                            <img src="${imageUrl}" alt="${name}" 
+                                 class="max-w-full max-h-full object-contain"
+                                 onerror="this.src='https://placehold.co/100x100/374151/ffffff?text=No+Img'; this.onerror=null;">
+                        </div>
+                        <span class="text-sm font-medium text-center text-gray-300">${name}</span>
+                    `;
+
+                    // Обработчик клика для выбора/снятия выбора
+                    card.addEventListener('click', () => {
+                        if (selectedItems.has(name)) {
+                            selectedItems.delete(name);
+                            card.classList.remove('item-selected');
+                        } else {
+                            selectedItems.set(name, 1); // Просто помечаем, что выбран
+                            card.classList.add('item-selected');
+                        }
+                        updateSelectionState();
+                    });
+                }
+
+                grid.appendChild(card); // Добавляем в указанную сетку
+            }
+
+            // Функция обновления состояния кнопки и счетчика
+            function updateSelectionState() {
+                // selectedCount - это количество УНИКАЛЬНЫХ предметов
+                const selectedCount = selectedItems.size; 
+
+                if (selectedCount === 0) {
+                    selectionCounter.textContent = 'Select items to get';
+                } else if (selectedCount === 1) {
+                    selectionCounter.textContent = '1 item selected!';
+                } else {
+                    selectionCounter.textContent = `${selectedCount} items selected!`;
+                }
+
+                // Активируем кнопку, если выбран хотя бы один предмет
+                if (selectedCount > 0) {
+                    nextButton.classList.remove('disabled-button');
+                    nextButton.classList.add('active-button');
+                    nextButton.disabled = false;
+                } else {
+                    nextButton.classList.add('disabled-button');
+                    nextButton.classList.remove('active-button');
+                    nextButton.disabled = true;
+                }
+            }
+
+            // --- Добавляем все предметы "Resources" (с типом 'resource') ---
+            createItemCard('Fuel Canister', 'https://i.postimg.cc/gkHrKsnn/Fuel-canister.webp', itemGrid, 'resource');
+            createItemCard('Cooked Ribs', 'https://i.postimg.cc/cL1Ck3nk/Ribs-Cooked2.png', itemGrid, 'resource');
+            createItemCard('Jar o\' Jelly', 'https://i.postimg.cc/wjxM4Nms/Jar-O-Jelly.webp', itemGrid, 'resource');
+            createItemCard('Cooked Steak', 'https://i.postimg.cc/fTfkvCJs/Cooked-Steak.png', itemGrid, 'resource');
+            createItemCard('UFO Scrap', 'https://i.postimg.cc/L845QPPd/UFO-Scrap.webp', itemGrid, 'resource');
+            createItemCard('Medkit', 'https://i.postimg.cc/0y5jXSwM/Medkit-1.webp', itemGrid, 'resource');
+            createItemCard('Bandage', 'https://i.postimg.cc/0y5jXSwM/Medkit-1.webp', itemGrid, 'resource');
+            createItemCard('Wood', 'https://i.postimg.cc/Dwf0pGGk/Woodmaterial.webp', itemGrid, 'resource');
+            createItemCard('Oil Barrel', 'https://i.postimg.cc/0y5jXSwZ/Oil-barrel.webp', itemGrid, 'resource');
+            createItemCard('Cultist Prototype', 'https://i.postimg.cc/jd4ChcLR/Cultist-Prototype.webp', itemGrid, 'resource');
+            createItemCard('Mossy Coin', 'https://i.postimg.cc/13RX7Fqw/Mossy-Coins.webp', itemGrid, 'resource');
+            createItemCard('Obsidiron Ingot', 'https://i.postimg.cc/Gm3tgDyK/Obsidiron-Ingot.webp', itemGrid, 'resource');
+            createItemCard('Scalding Obsidiron Ingot', 'https://i.postimg.cc/QdNCY7Ty/Scalding-Obsidiron-Ingot.webp', itemGrid, 'resource');
+            createItemCard('Log', 'https://i.postimg.cc/gkHrKsnH/Logcrop.webp', itemGrid, 'resource');
+            createItemCard('Coal', 'https://i.postimg.cc/sD41Jmvr/Coal.webp', itemGrid, 'resource');
+
+            // --- Добавляем предметы "Armor" (тип 'simple' по умолчанию) ---
+            createItemCard('Vampire Cloak', 'https://i.postimg.cc/rFNz9jKm/Dracula.webp', armorGrid);
+            createItemCard('Obsidiron Body', 'https://i.postimg.cc/XYNq15Cw/Obsidiron-Body.png', armorGrid);
+            createItemCard('Alien Armor', 'https://i.postimg.cc/m2stMJ2r/Alien-Armor.webp', armorGrid);
+            createItemCard('Riot Shield', 'https://i.postimg.cc/W1pzYZkf/Riot-shield.png', armorGrid);
+            createItemCard('Thorn Body', 'https://i.postimg.cc/Gm3tgDyZ/Thorn-body.png', armorGrid);
+            createItemCard('Infernal Helmet', 'https://i.postimg.cc/QxJVqmHc/Infernal-Helm.webp', armorGrid);
+
+            // --- Добавляем предметы "Weapon" (тип 'simple' по умолчанию) ---
+            createItemCard('Scythe', 'https://i.postimg.cc/SxQR19M5/Scythe.webp', weaponGrid);
+            createItemCard('Obsidiron Hammer', 'https://i.postimg.cc/y86xpRZy/Obsidiron-Hammer.png', weaponGrid);
+            createItemCard('Infernal Sword', 'https://i.postimg.cc/wTQ3k27J/Infernal-sword.webp', weaponGrid);
+            createItemCard('Bouncing Blade', 'https://i.postimg.cc/FsV1xp79/Bouncing-Blade.webp', weaponGrid);
+            createItemCard('Infernal Crossbow', 'https://i.postimg.cc/X7kXgLpw/Infernal-Crossbows.png', weaponGrid);
+            createItemCard('Ray Gun', 'https://i.postimg.cc/QdNCY7Tf/Ray-Gun.webp', weaponGrid);
+
+            // Инициализируем состояние при загрузке
+            updateSelectionState();
+        });
+    </script>
+</body>
+</html>
