@@ -25,13 +25,9 @@
 
         /* --- Стили для карточек --- */
         
-        /* !!! ВОТ СТИЛЬ ДЛЯ ОБВОДКИ !!!
-           Этот класс .item-selected добавляет синюю рамку.
+        /* Я УДАЛИЛ класс .item-selected отсюда. 
+           Стили теперь будут применяться напрямую через JavaScript.
         */
-        .item-selected {
-            box-shadow: 0 0 0 3px #3b82f6, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Синяя рамка (ring-blue-500) и тень */
-            transform: scale(1.03); /* Немного увеличить */
-        }
         
         /* Стили для счетчика (+/-) */
         .quantity-controls {
@@ -332,6 +328,17 @@
                 card.dataset.name = name;
                 card.style.cursor = 'pointer'; // Добавляем курсор для всех карточек
 
+                // *** НОВЫЕ СТИЛИ ДЛЯ ОБВОДКИ ***
+                const selectedStyle = {
+                    boxShadow: '0 0 0 3px #3b82f6, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    transform: 'scale(1.03)'
+                };
+                const defaultStyle = {
+                    boxShadow: 'none',
+                    transform: 'none'
+                };
+                // *** КОНЕЦ НОВЫХ СТИЛЕЙ ***
+
                 if (type === 'resource') {
                     // --- Структура для "Resources" с +/- ---
                     card.innerHTML = `
@@ -369,10 +376,14 @@
                         quantityDisplay.textContent = count;
                         if (count === 0) {
                             selectedItems.delete(name); // Удаляем из Map, если 0
-                            card.classList.remove('item-selected'); // <-- СНИМАЕМ ОБВОДКУ
+                            // *** ПРИМЕНЯЕМ СТИЛЬ НАПРЯМУЮ ***
+                            card.style.boxShadow = defaultStyle.boxShadow;
+                            card.style.transform = defaultStyle.transform;
                         } else {
                             selectedItems.set(name, count);
-                            card.classList.add('item-selected'); // <-- ДОБАВЛЯЕМ ОБВОДКУ
+                            // *** ПРИМЕНЯЕМ СТИЛЬ НАПРЯМУЮ ***
+                            card.style.boxShadow = selectedStyle.boxShadow;
+                            card.style.transform = selectedStyle.transform;
                         }
                         updateSelectionState();
                     }
@@ -411,10 +422,14 @@
                     card.addEventListener('click', () => {
                         if (selectedItems.has(name)) {
                             selectedItems.delete(name);
-                            card.classList.remove('item-selected'); // <-- СНИМАЕМ ОБВОДКУ
+                            // *** ПРИМЕНЯЕМ СТИЛЬ НАПРЯМУЮ ***
+                            card.style.boxShadow = defaultStyle.boxShadow;
+                            card.style.transform = defaultStyle.transform;
                         } else {
                             selectedItems.set(name, 1); // Просто помечаем, что выбран
-                            card.classList.add('item-selected'); // <-- ДОБАВЛЯЕМ ОБВОДКУ
+                            // *** ПРИМЕНЯЕМ СТИЛЬ НАПРЯМУЮ ***
+                            card.style.boxShadow = selectedStyle.boxShadow;
+                            card.style.transform = selectedStyle.transform;
                         }
                         updateSelectionState();
                     });
