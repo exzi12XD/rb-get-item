@@ -25,7 +25,9 @@
 
         /* --- Стили для карточек --- */
         
-        /* Стиль для выделенной карточки */
+        /* !!! ВОТ СТИЛЬ ДЛЯ ОБВОДКИ !!!
+           Этот класс .item-selected добавляет синюю рамку.
+        */
         .item-selected {
             box-shadow: 0 0 0 3px #3b82f6, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Синяя рамка (ring-blue-500) и тень */
             transform: scale(1.03); /* Немного увеличить */
@@ -328,6 +330,7 @@
                 const card = document.createElement('div');
                 card.className = 'item-card bg-gray-800 p-3 rounded-lg shadow-lg transition-all duration-200 ease-in-out flex flex-col items-center';
                 card.dataset.name = name;
+                card.style.cursor = 'pointer'; // Добавляем курсор для всех карточек
 
                 if (type === 'resource') {
                     // --- Структура для "Resources" с +/- ---
@@ -350,35 +353,51 @@
                     const minusBtn = card.querySelector('.minus-btn');
                     const quantityDisplay = card.querySelector('.quantity-display');
 
+                    // Общая функция для обновления счетчика
+                    function updateResourceCount(increment) {
+                        let count = selectedItems.get(name) || 0;
+                        
+                        if (increment) {
+                            // Увеличиваем
+                            count++;
+                        } else if (count > 0) {
+                            // Уменьшаем, только если больше 0
+                            count--;
+                        }
+
+                        // Обновляем Map и UI
+                        quantityDisplay.textContent = count;
+                        if (count === 0) {
+                            selectedItems.delete(name); // Удаляем из Map, если 0
+                            card.classList.remove('item-selected'); // <-- СНИМАЕМ ОБВОДКУ
+                        } else {
+                            selectedItems.set(name, count);
+                            card.classList.add('item-selected'); // <-- ДОБАВЛЯЕМ ОБВОДКУ
+                        }
+                        updateSelectionState();
+                    }
+
+
+                    // Обработчики для кнопок +/-
                     plusBtn.addEventListener('click', (e) => {
                         e.stopPropagation(); // Остановить всплытие
-                        let count = selectedItems.get(name) || 0;
-                        count++;
-                        selectedItems.set(name, count);
-                        quantityDisplay.textContent = count;
-                        card.classList.add('item-selected'); // Выделить, если > 0
-                        updateSelectionState();
+                        updateResourceCount(true); // true = +1
                     });
 
                     minusBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        let count = selectedItems.get(name) || 0;
-                        if (count > 0) {
-                            count--;
-                            quantityDisplay.textContent = count;
-                            if (count === 0) {
-                                selectedItems.delete(name); // Удаляем из Map, если 0
-                                card.classList.remove('item-selected'); // Снять выделение
-                            } else {
-                                selectedItems.set(name, count);
-                            }
-                            updateSelectionState();
-                        }
+                        updateResourceCount(false); // false = -1
                     });
+                    
+                    // Обработчик для клика на *саму карточку* (не на кнопки)
+                    card.addEventListener('click', () => {
+                        // При клике на карточку, просто увеличиваем на 1
+                        updateResourceCount(true); // true = +1
+                    });
+
 
                 } else {
                     // --- Старая структура для "Armor" и "Weapon" ---
-                    card.style.cursor = 'pointer'; // Добавляем курсор, т.к. вся карточка кликабельна
                     card.innerHTML = `
                         <div class="w-20 h-20 mb-2 flex items-center justify-center">
                             <img src="${imageUrl}" alt="${name}" 
@@ -392,10 +411,10 @@
                     card.addEventListener('click', () => {
                         if (selectedItems.has(name)) {
                             selectedItems.delete(name);
-                            card.classList.remove('item-selected');
+                            card.classList.remove('item-selected'); // <-- СНИМАЕМ ОБВОДКУ
                         } else {
                             selectedItems.set(name, 1); // Просто помечаем, что выбран
-                            card.classList.add('item-selected');
+                            card.classList.add('item-selected'); // <-- ДОБАВЛЯЕМ ОБВОДКУ
                         }
                         updateSelectionState();
                     });
